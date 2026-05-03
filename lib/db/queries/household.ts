@@ -1,10 +1,11 @@
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { households, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function getHousehold() {
+export const getHousehold = cache(async () => {
   return db.query.households.findFirst();
-}
+});
 
 export async function listHouseholds() {
   return db.query.households.findMany();
@@ -17,9 +18,9 @@ export async function getUsers(householdId: string) {
   });
 }
 
-export async function getUserById(userId: string) {
+export const getUserById = cache(async (userId: string) => {
   return db.query.users.findFirst({
     where: eq(users.id, userId),
     with: { household: true },
   });
-}
+});

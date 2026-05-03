@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -38,28 +38,51 @@ function today() {
 export function TaskForm({ open, onClose, users, editTask }: Props) {
   const [isPending, startTransition] = useTransition();
 
-  const [title, setTitle]                     = useState(editTask?.title ?? "");
-  const [assignedUserId, setAssignedUserId]   = useState(editTask?.assignedUserId ?? null);
-  const [ownerUserId, setOwnerUserId]         = useState(editTask?.ownerUserId ?? null);
-  const [basePoints, setBasePoints]           = useState(editTask?.basePoints ?? 10);
-  const [penaltyPerDay, setPenaltyPerDay]     = useState(editTask?.penaltyPerDay ?? 2);
-  const [requiresApproval, setRequiresApproval] = useState(editTask?.requiresApproval ?? false);
-  const [recurrenceType, setRecurrenceType]   = useState<RecurrenceType>(
-    (editTask?.recurrenceType as RecurrenceType) ?? "once"
-  );
-  const [dayOfWeek, setDayOfWeek]             = useState(editTask?.recurrenceDayOfWeek ?? 0);
-  const [dayOfMonth, setDayOfMonth]           = useState(editTask?.recurrenceDayOfMonth ?? 1);
+  const [title, setTitle]                     = useState("");
+  const [assignedUserId, setAssignedUserId]   = useState<string | null>(null);
+  const [ownerUserId, setOwnerUserId]         = useState<string | null>(null);
+  const [basePoints, setBasePoints]           = useState(10);
+  const [penaltyPerDay, setPenaltyPerDay]     = useState(2);
+  const [requiresApproval, setRequiresApproval] = useState(false);
+  const [recurrenceType, setRecurrenceType]   = useState<RecurrenceType>("once");
+  const [dayOfWeek, setDayOfWeek]             = useState(0);
+  const [dayOfMonth, setDayOfMonth]           = useState(1);
   const [dueDate, setDueDate]                 = useState(today());
 
-  function reset() {
-    setTitle(""); setAssignedUserId(null); setOwnerUserId(null);
-    setBasePoints(10); setPenaltyPerDay(2); setRequiresApproval(false);
-    setRecurrenceType("once"); setDayOfWeek(0); setDayOfMonth(1);
+  function resetToDefaults() {
+    setTitle("");
+    setAssignedUserId(null);
+    setOwnerUserId(null);
+    setBasePoints(10);
+    setPenaltyPerDay(2);
+    setRequiresApproval(false);
+    setRecurrenceType("once");
+    setDayOfWeek(0);
+    setDayOfMonth(1);
     setDueDate(today());
   }
 
+  function loadFromTask(task: Task) {
+    setTitle(task.title);
+    setAssignedUserId(task.assignedUserId);
+    setOwnerUserId(task.ownerUserId);
+    setBasePoints(task.basePoints);
+    setPenaltyPerDay(task.penaltyPerDay);
+    setRequiresApproval(task.requiresApproval);
+    setRecurrenceType((task.recurrenceType as RecurrenceType) ?? "once");
+    setDayOfWeek(task.recurrenceDayOfWeek ?? 0);
+    setDayOfMonth(task.recurrenceDayOfMonth ?? 1);
+    setDueDate(today());
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    if (editTask) loadFromTask(editTask);
+    else resetToDefaults();
+  }, [open, editTask]);
+
   function handleClose() {
-    reset();
+    resetToDefaults();
     onClose();
   }
 
@@ -110,6 +133,8 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
           <Field label="Naam">
             <input
               type="text"
+              name="task-title"
+              autoComplete="off"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="bijv. Afwassen"

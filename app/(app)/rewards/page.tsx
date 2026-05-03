@@ -1,8 +1,5 @@
-import { eq } from "drizzle-orm";
 import { requireSession } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { users as usersTable } from "@/lib/db/schema";
-import { getUserPoints, getUserTransactions, getHouseholdLeaderboard } from "@/lib/points/queries";
+import { getUserPoints, getUserTransactions } from "@/lib/points/queries";
 import { getHouseholdRewards } from "@/lib/rewards/queries";
 import { RewardCard } from "@/components/rewards/RewardCard";
 import { RewardsManageSection } from "@/components/rewards/RewardsManageSection";
@@ -11,40 +8,16 @@ import { TransactionHistory } from "@/components/rewards/TransactionHistory";
 export default async function RewardsPage() {
   const session = await requireSession();
 
-  const [allRewards, balance, transactions, leaderboard, currentUser] = await Promise.all([
+  const [allRewards, balance, transactions] = await Promise.all([
     getHouseholdRewards(session.householdId),
     getUserPoints(session.userId),
     getUserTransactions(session.userId, 20),
-    getHouseholdLeaderboard(session.householdId),
-    db.query.users.findFirst({ where: eq(usersTable.id, session.userId) }),
   ]);
-
-  const me = leaderboard.find((u) => u.userId === session.userId);
-  const myColor = me?.color ?? currentUser?.color ?? "#6366f1";
-  const myAvatar = me?.avatar ?? currentUser?.avatar ?? "👤";
 
   const activeRewards = allRewards.filter((r) => r.isActive);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Jouw saldo</span>
-        <div className="flex items-center gap-2">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base"
-            style={{ backgroundColor: `${myColor}20` }}
-          >
-            {myAvatar}
-          </span>
-          <span
-            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold"
-            style={{ backgroundColor: `${myColor}18`, color: myColor }}
-          >
-            {balance} pts
-          </span>
-        </div>
-      </div>
-
+    <>
       <h1 className="mb-6 text-3xl font-extrabold text-slate-800">Beloningen</h1>
 
       <section className="mb-8">
@@ -85,6 +58,6 @@ export default async function RewardsPage() {
         <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">Geschiedenis</h2>
         <TransactionHistory transactions={transactions} />
       </section>
-    </div>
+    </>
   );
 }

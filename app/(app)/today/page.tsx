@@ -1,8 +1,4 @@
 import { requireSession } from "@/lib/auth/session";
-import { getHousehold } from "@/lib/db/queries/household";
-import { db } from "@/lib/db";
-import { users as usersTable } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { getTodayInstances } from "@/lib/tasks/queries";
 import { getHouseholdLeaderboard } from "@/lib/points/queries";
 import { TaskCard } from "@/components/tasks/TaskCard";
@@ -28,10 +24,8 @@ function sortInstances(instances: InstanceWithRelations[]) {
 
 export default async function TodayPage() {
   const session = await requireSession();
-  const [household, leaderboard, currentUser, rawInstances] = await Promise.all([
-    getHousehold(),
+  const [leaderboard, rawInstances] = await Promise.all([
     getHouseholdLeaderboard(session.householdId),
-    db.query.users.findFirst({ where: eq(usersTable.id, session.userId) }),
     getTodayInstances(session.householdId, new Date()),
   ]);
 
@@ -40,56 +34,10 @@ export default async function TodayPage() {
     (i) => i.status !== "completed" && i.status !== "approved"
   ).length;
 
-  const me = leaderboard.find((u) => u.userId === session.userId);
-  const myColor = me?.color ?? "#6366f1";
-  const myAvatar = me?.avatar ?? "👤";
-  const myPoints = me?.totalPoints ?? 0;
-  const myStreak = currentUser?.currentStreak ?? 0;
-  const streakActive = myStreak > 0;
-
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY?.trim() ?? "";
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">
-          {household?.name}
-        </span>
-        <div className="flex items-center gap-2">
-          <span
-            className="w-8 h-8 rounded-full flex items-center justify-center text-base"
-            style={{ backgroundColor: myColor + "20" }}
-          >
-            {myAvatar}
-          </span>
-          <span className="text-sm font-semibold text-slate-700">
-            {session.userName}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-              streakActive
-                ? "bg-orange-50 text-orange-500"
-                : "bg-slate-100 text-slate-400"
-            }`}
-            title={
-              streakActive
-                ? `${myStreak} ${myStreak === 1 ? "dag" : "dagen"} op rij!`
-                : "Doe vandaag een taak om je streak te starten"
-            }
-          >
-            <span>🔥</span>
-            <span>{myStreak}</span>
-          </span>
-          <span
-            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
-            style={{ backgroundColor: myColor + "18", color: myColor }}
-          >
-            {myPoints} pts
-          </span>
-        </div>
-      </div>
-
+    <>
       <h1 className="text-3xl font-extrabold text-slate-800 mb-4">
         Vandaag
         {openCount > 0 && (
@@ -146,6 +94,6 @@ export default async function TodayPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

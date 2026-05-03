@@ -17,9 +17,9 @@ export default async function TasksPage() {
   ]);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+    <>
       <h1 className="text-3xl font-extrabold text-slate-800 mb-6">Taken</h1>
       <TasksManager tasks={tasks as TaskWithUsers[]} users={users} />
-    </div>
+    </>
   );
 }
