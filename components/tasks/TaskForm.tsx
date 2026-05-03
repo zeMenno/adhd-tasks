@@ -10,7 +10,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createTask, updateTask } from "@/lib/tasks/actions";
-import type { Task, User } from "@/lib/db/schema";
+import type { Task } from "@/lib/db/schema";
+import type { HouseholdMember } from "@/lib/db/queries/household";
 
 type RecurrenceType = "once" | "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -27,7 +28,7 @@ const DAYS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 type Props = {
   open: boolean;
   onClose: () => void;
-  users: User[];
+  users: HouseholdMember[];
   editTask?: Task | null;
 };
 
@@ -121,14 +122,17 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl px-5 pb-10">
+      <SheetContent
+        side="bottom"
+        className="max-h-[92dvh] w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-t-2xl px-5 pb-10"
+      >
         <SheetHeader className="mb-5 pt-2">
           <SheetTitle className="text-xl font-extrabold">
             {editTask ? "Taak bewerken" : "Nieuwe taak"}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 w-full flex-col gap-5">
           {/* Title */}
           <Field label="Naam">
             <input
@@ -144,7 +148,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
 
           {/* Assigned user */}
           <Field label="Voor wie?">
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex min-w-0 w-full flex-wrap gap-2">
               <Pill
                 active={assignedUserId === null}
                 onClick={() => setAssignedUserId(null)}
@@ -159,7 +163,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
                   onClick={() => setAssignedUserId(u.id)}
                   color={u.color}
                 >
-                  {u.avatar} {u.name}
+                  {u.avatar ?? "👤"} {u.name}
                 </Pill>
               ))}
             </div>
@@ -167,7 +171,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
 
           {/* Owner */}
           <Field label="Goedgekeurd door">
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex min-w-0 w-full flex-wrap gap-2">
               <Pill
                 active={ownerUserId === null}
                 onClick={() => setOwnerUserId(null)}
@@ -182,7 +186,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
                   onClick={() => setOwnerUserId(u.id)}
                   color={u.color}
                 >
-                  {u.avatar} {u.name}
+                  {u.avatar ?? "👤"} {u.name}
                 </Pill>
               ))}
             </div>

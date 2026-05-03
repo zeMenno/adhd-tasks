@@ -6,6 +6,7 @@ import { Pencil, Trash2, Plus } from "lucide-react";
 import { TaskForm } from "./TaskForm";
 import { deactivateTask } from "@/lib/tasks/actions";
 import type { Task, User } from "@/lib/db/schema";
+import type { HouseholdMember } from "@/lib/db/queries/household";
 
 type TaskWithUsers = Task & {
   assignedUser: User | null;
@@ -14,7 +15,7 @@ type TaskWithUsers = Task & {
 
 type Props = {
   tasks: TaskWithUsers[];
-  users: User[];
+  users: HouseholdMember[];
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getHousehold, getUsers } from "@/lib/db/queries/household";
+import { getHousehold, getHouseholdMembers } from "@/lib/db/queries/household";
 import { getSession } from "@/lib/auth/session";
 import { PinClient } from "./PinClient";
 
@@ -11,7 +11,7 @@ export default async function PinPage() {
   const household = await getHousehold();
   if (!household) redirect("/setup");
 
-  const users = await getUsers(household.id);
+  const users = await getHouseholdMembers(household.id);
 
   return <PinClient household={household} users={users} />;
 }

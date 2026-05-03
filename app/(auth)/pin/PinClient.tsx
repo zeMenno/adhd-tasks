@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Household, User } from "@/lib/db/schema";
+import type { Household } from "@/lib/db/schema";
+import type { HouseholdMember } from "@/lib/db/queries/household";
 
 type Props = {
   household: Household;
-  users: User[];
+  users: HouseholdMember[];
 };
 
 export function PinClient({ household, users }: Props) {
   const router = useRouter();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<HouseholdMember | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  function handleUserSelect(user: User) {
+  function handleUserSelect(user: HouseholdMember) {
     setSelectedUser(user);
     setPin("");
     setError("");

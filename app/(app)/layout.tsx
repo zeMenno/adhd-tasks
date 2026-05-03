@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getAppHeaderData } from "@/lib/app/header-data";
 import { AppUserHeader } from "@/components/layout/AppUserHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { InstallBanner } from "@/components/layout/InstallBanner";
 import { Toaster } from "@/components/ui/sonner";
 
 export default async function AppLayout({
@@ -20,6 +21,7 @@ export default async function AppLayout({
           {children}
         </div>
       </main>
+      <InstallBanner />
       <BottomNav />
       <Toaster position="top-center" richColors />
     </div>
