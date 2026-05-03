@@ -7,7 +7,7 @@ import { CheckSquare, Gift, LayoutList, BarChart2 } from "lucide-react";
 const NAV_ITEMS = [
   { href: "/today",   label: "Vandaag",  Icon: CheckSquare },
   { href: "/tasks",   label: "Taken",    Icon: LayoutList  },
-  { href: "/rewards", label: "Rewards",  Icon: Gift        },
+  { href: "/rewards", label: "Beloningen", Icon: Gift },
   { href: "/stats",   label: "Stats",    Icon: BarChart2   },
 ];
 

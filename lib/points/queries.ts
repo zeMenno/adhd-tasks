@@ -43,6 +43,10 @@ export async function getUserTransactions(userId: string, limit = 20) {
   });
 }
 
+export type UserTransactionRow = Awaited<
+  ReturnType<typeof getUserTransactions>
+>[number];
+
 export type HouseholdLeaderboardRow = {
   userId: string;
   name: string;

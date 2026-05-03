@@ -19,7 +19,7 @@ import { getUserPoints } from "./queries";
  *
  * Throws "Niet genoeg punten" when the user can't afford the reward.
  *
- * Server-action foundation for Step 14 (Reward Store) — no UI calls this yet.
+ * Called from `redeemReward` in the Reward Store UI.
  */
 export async function spendPoints(rewardId: string): Promise<void> {
   const session = await requireSession();
