@@ -31,13 +31,25 @@ Create a new Next.js 15 project called "adhd-tasks" with the following setup:
    - App Router: yes
    - Import alias: yes (@/*)
 
-2. After creation, install and initialize ShadCN UI:
+2. Install and set up the Vercel CLI globally, then add the Vercel plugin:
+   ```
+   npm install -g vercel
+   vercel plugins add vercel/vercel-plugin
+   ```
+   After installation, link the project to Vercel:
+   ```
+   vercel link
+   ```
+   Follow the prompts: create a new project called "adhd-tasks" under your Vercel account.
+   This creates a `.vercel/` folder with your project ID — commit the `project.json` but NOT the `.vercel/` folder itself (add it to .gitignore except for `project.json`).
+
+3. After creation, install and initialize ShadCN UI:
    - Run `npx shadcn@latest init`
    - Style: Default
    - Base color: Slate
    - CSS variables: yes
 
-3. Install these additional packages:
+4. Install these additional packages:
    - `npm install drizzle-orm @neondatabase/serverless`
    - `npm install -D drizzle-kit`
    - `npm install web-push`
@@ -45,10 +57,10 @@ Create a new Next.js 15 project called "adhd-tasks" with the following setup:
    - `npm install date-fns`
    - `npm install zod`
 
-4. Add the following ShadCN components:
+5. Add the following ShadCN components:
    - `npx shadcn@latest add button card badge dialog sheet toast progress`
 
-5. Create the following folder structure inside the project root:
+6. Create the following folder structure inside the project root:
    ```
    app/
      (auth)/
@@ -72,16 +84,29 @@ Create a new Next.js 15 project called "adhd-tasks" with the following setup:
      tasks/
    ```
 
-6. Add a `.env.local` file with these placeholder variables:
+7. Add a `.env.local` file with these placeholder variables:
    ```
    DATABASE_URL=
    NEXT_PUBLIC_APP_URL=http://localhost:3000
    VAPID_PUBLIC_KEY=
    VAPID_PRIVATE_KEY=
    VAPID_EMAIL=
+   SESSION_SECRET=
+   CRON_SECRET=
+   ```
+   Then pull any already-set Vercel env vars (if any) with:
+   ```
+   vercel env pull .env.local
+   ```
+   This syncs your local .env.local with whatever is set in the Vercel dashboard.
+
+8. Update `.gitignore` to include:
+   ```
+   .env.local
+   .vercel
    ```
 
-7. Update `next.config.ts` to enable PWA support later by adding:
+9. Update `next.config.ts` to enable PWA support later by adding:
    ```ts
    const nextConfig = {
      experimental: {
@@ -91,7 +116,7 @@ Create a new Next.js 15 project called "adhd-tasks" with the following setup:
    export default nextConfig
    ```
 
-Report what was created and confirm the folder structure exists.
+Report what was created, confirm the folder structure exists, and confirm `vercel link` succeeded.
 ```
 
 ---
@@ -111,7 +136,21 @@ Set up the Neon database connection for this Next.js project.
 
 Context:
 - We use Neon (serverless Postgres) with Drizzle ORM
-- The DATABASE_URL is already in .env.local (user will fill it in manually from neon.tech)
+- The project is already linked to Vercel via `vercel link` (done in Step 1)
+- The DATABASE_URL will be set via Vercel CLI — the user has already created a Neon database at neon.tech and has the connection string ready
+
+1. Add the DATABASE_URL to Vercel via CLI (run for all three environments):
+   ```
+   vercel env add DATABASE_URL production
+   vercel env add DATABASE_URL preview
+   vercel env add DATABASE_URL development
+   ```
+   Paste the Neon connection string when prompted (same value for all three).
+
+   Then pull it to your local .env.local:
+   ```
+   vercel env pull .env.local
+   ```
 
 1. Create `lib/db/index.ts`:
 ```ts
@@ -830,15 +869,28 @@ Set up Web Push notifications for ADHDTasks.
 
 **Important iOS note:** Web Push only works on iOS 16.4+ when the app is installed as a PWA (added to home screen). On Android and desktop it works in the browser directly. We handle this gracefully.
 
-**1. Generate VAPID keys:**
-```
+**1. Generate VAPID keys and push them directly to Vercel via CLI:**
+```bash
 npx web-push generate-vapid-keys
 ```
-Add the output to `.env.local`:
+Copy the output values and add them to Vercel immediately (no manual dashboard needed):
+```bash
+vercel env add VAPID_PUBLIC_KEY production
+vercel env add VAPID_PUBLIC_KEY preview
+vercel env add VAPID_PUBLIC_KEY development
+
+vercel env add VAPID_PRIVATE_KEY production
+vercel env add VAPID_PRIVATE_KEY preview
+vercel env add VAPID_PRIVATE_KEY development
+
+vercel env add VAPID_EMAIL production
+vercel env add VAPID_EMAIL preview
+vercel env add VAPID_EMAIL development
+# Enter: mailto:your@email.com
 ```
-VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_EMAIL=mailto:your@email.com
+Then pull to local so the app can use them:
+```bash
+vercel env pull .env.local
 ```
 
 **2. Create `public/sw.js` (Service Worker):**
@@ -1394,52 +1446,101 @@ export async function getAllTimeStats(householdId: string)
 **AI-prompt:**
 
 ```
-Deploy ADHDTasks to Vercel.
+Deploy ADHDTasks to Vercel using the Vercel CLI. The project is already linked via `vercel link` (done in Step 1) and most env vars were set in Step 2. This step finalizes the remaining vars and deploys.
 
-**1. Pre-deployment checklist — verify these manually:**
-- [ ] `vercel.json` contains all 4 cron jobs
-- [ ] All environment variables are in `.env.local`
-- [ ] `npm run build` succeeds locally without errors
-- [ ] Database schema is pushed to Neon production DB (`npm run db:push`)
+**1. Verify all environment variables are set via CLI:**
 
-**2. Deploy:**
+Run `vercel env ls` to see what's already configured. Then add any missing vars:
 ```bash
-npm install -g vercel
+vercel env add SESSION_SECRET production
+vercel env add SESSION_SECRET preview
+vercel env add SESSION_SECRET development
+
+vercel env add VAPID_PUBLIC_KEY production
+vercel env add VAPID_PUBLIC_KEY preview
+
+vercel env add VAPID_PRIVATE_KEY production
+vercel env add VAPID_PRIVATE_KEY preview
+
+vercel env add VAPID_EMAIL production
+vercel env add VAPID_EMAIL preview
+
+vercel env add CRON_SECRET production
+vercel env add CRON_SECRET preview
+```
+
+For NEXT_PUBLIC_APP_URL: set to your Vercel domain after the first deploy (see step 3).
+
+After adding all vars, pull the latest to local:
+```bash
+vercel env pull .env.local
+```
+
+**2. Pre-deployment checklist — verify these automatically:**
+```bash
+# Confirm vercel.json has all 4 cron jobs:
+cat vercel.json
+
+# Run a local production build to catch errors before deploying:
+npm run build
+
+# Push schema to Neon production DB one final time:
+npm run db:push
+```
+Fix any build errors before continuing. Do not deploy if `npm run build` fails.
+
+**3. Deploy to production:**
+```bash
+vercel --prod
+```
+Note the deployment URL from the output (e.g. `https://adhd-tasks.vercel.app`).
+
+**4. Set NEXT_PUBLIC_APP_URL to the live domain:**
+```bash
+vercel env add NEXT_PUBLIC_APP_URL production
+# Enter: https://adhd-tasks.vercel.app (or your custom domain)
+
+vercel env add NEXT_PUBLIC_APP_URL preview
+# Enter: https://adhd-tasks.vercel.app
+
+# Re-deploy to apply the new env var:
 vercel --prod
 ```
 
-**3. Set environment variables in Vercel dashboard (or via CLI):**
+**5. Verify cron jobs via CLI:**
 ```bash
-vercel env add DATABASE_URL production
-vercel env add SESSION_SECRET production
-vercel env add VAPID_PUBLIC_KEY production
-vercel env add VAPID_PRIVATE_KEY production
-vercel env add VAPID_EMAIL production
-vercel env add CRON_SECRET production
-vercel env add NEXT_PUBLIC_APP_URL production
+vercel inspect --wait
 ```
-For NEXT_PUBLIC_APP_URL: set to your actual Vercel domain (e.g. https://adhd-tasks.vercel.app)
+This shows the deployment details including cron configuration. You should see all 4 cron paths listed. To trigger a cron manually for testing:
+```bash
+# Trigger the daily scheduler manually:
+curl -H "Authorization: Bearer <your-CRON_SECRET>" \
+  https://adhd-tasks.vercel.app/api/cron/daily
 
-**4. Verify cron jobs:**
-- Go to Vercel Dashboard → your project → Settings → Cron Jobs
-- You should see 4 cron jobs listed
-- Trigger each manually once to verify they work
+# Trigger phase 1 notification manually:
+curl -H "Authorization: Bearer <your-CRON_SECRET>" \
+  https://adhd-tasks.vercel.app/api/cron/notify/phase1
+```
+Both should return `{ "success": true }`.
 
-**5. Test the full flow after deployment:**
-- [ ] Open the app → redirected to /setup
-- [ ] Complete setup → redirected to /pin
+**6. Add custom domain (optional):**
+```bash
+vercel domains add yourdomain.com
+vercel alias set adhd-tasks.vercel.app yourdomain.com
+```
+Then update NEXT_PUBLIC_APP_URL to the custom domain and re-deploy.
+
+**7. Post-deployment smoke test — run through this checklist:**
+- [ ] Open the live URL → redirected to /setup
+- [ ] Complete household setup → redirected to /pin
 - [ ] Login with PIN → redirected to /today
-- [ ] Create a task → appears on Today
-- [ ] Mark task as done → points awarded
-- [ ] Enable push notifications → receive test notification
-- [ ] Install as PWA (Add to Home Screen) → app opens standalone
+- [ ] Create a task → appears on Today view
+- [ ] Mark task as done → points awarded, animation plays
+- [ ] Enable push notifications → confirm permission prompt appears
+- [ ] Trigger phase 1 cron manually → receive push notification on device
+- [ ] Install as PWA (Add to Home Screen on iOS/Android) → app opens standalone
 
-**6. Domain (optional):**
-- Add a custom domain in Vercel Dashboard → Domains
-- Update NEXT_PUBLIC_APP_URL to the custom domain
-- Re-deploy or trigger a re-build
-
-Report any build errors found during `vercel --prod`.
+Report any errors from `vercel --prod` output or the smoke test.
 ```
 
 ---
