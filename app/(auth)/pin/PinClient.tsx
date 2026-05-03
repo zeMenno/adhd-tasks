@@ -47,8 +47,21 @@ export function PinClient({ household, users }: Props) {
         router.push("/today");
         router.refresh();
       } else {
-        const data = await res.json();
-        setError(data.error ?? "Verkeerde PIN");
+        let message = "Verkeerde PIN";
+        const ct = res.headers.get("content-type");
+        if (ct?.includes("application/json")) {
+          try {
+            const data = (await res.json()) as { error?: string };
+            message = data.error ?? message;
+          } catch {
+            if (res.status >= 500) {
+              message = "Serverfout. Probeer het later opnieuw.";
+            }
+          }
+        } else if (res.status >= 500) {
+          message = "Serverfout. Probeer het later opnieuw.";
+        }
+        setError(message);
         setPin("");
         setShake(true);
         setTimeout(() => setShake(false), 500);

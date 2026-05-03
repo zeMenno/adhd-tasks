@@ -1,6 +1,10 @@
 import { requireSession } from "@/lib/auth/session";
-import { getHousehold, getUsers } from "@/lib/db/queries/household";
+import { getHousehold } from "@/lib/db/queries/household";
+import { db } from "@/lib/db";
+import { users as usersTable } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { getTodayInstances } from "@/lib/tasks/queries";
+import { getHouseholdLeaderboard } from "@/lib/points/queries";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { PushPrompt } from "@/components/notifications/PushPrompt";
 import type { TaskInstance, Task, User } from "@/lib/db/schema";
@@ -24,9 +28,10 @@ function sortInstances(instances: InstanceWithRelations[]) {
 
 export default async function TodayPage() {
   const session = await requireSession();
-  const [household, users, rawInstances] = await Promise.all([
+  const [household, leaderboard, currentUser, rawInstances] = await Promise.all([
     getHousehold(),
-    getUsers(session.householdId),
+    getHouseholdLeaderboard(session.householdId),
+    db.query.users.findFirst({ where: eq(usersTable.id, session.userId) }),
     getTodayInstances(session.householdId, new Date()),
   ]);
 
@@ -34,6 +39,13 @@ export default async function TodayPage() {
   const openCount = instances.filter(
     (i) => i.status !== "completed" && i.status !== "approved"
   ).length;
+
+  const me = leaderboard.find((u) => u.userId === session.userId);
+  const myColor = me?.color ?? "#6366f1";
+  const myAvatar = me?.avatar ?? "👤";
+  const myPoints = me?.totalPoints ?? 0;
+  const myStreak = currentUser?.currentStreak ?? 0;
+  const streakActive = myStreak > 0;
 
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY?.trim() ?? "";
 
@@ -47,15 +59,33 @@ export default async function TodayPage() {
         <div className="flex items-center gap-2">
           <span
             className="w-8 h-8 rounded-full flex items-center justify-center text-base"
-            style={{
-              backgroundColor:
-                (users.find((u) => u.id === session.userId)?.color ?? "#6366f1") + "20",
-            }}
+            style={{ backgroundColor: myColor + "20" }}
           >
-            {users.find((u) => u.id === session.userId)?.avatar ?? "👤"}
+            {myAvatar}
           </span>
           <span className="text-sm font-semibold text-slate-700">
             {session.userName}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+              streakActive
+                ? "bg-orange-50 text-orange-500"
+                : "bg-slate-100 text-slate-400"
+            }`}
+            title={
+              streakActive
+                ? `${myStreak} ${myStreak === 1 ? "dag" : "dagen"} op rij!`
+                : "Doe vandaag een taak om je streak te starten"
+            }
+          >
+            <span>🔥</span>
+            <span>{myStreak}</span>
+          </span>
+          <span
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+            style={{ backgroundColor: myColor + "18", color: myColor }}
+          >
+            {myPoints} pts
           </span>
         </div>
       </div>
@@ -75,27 +105,25 @@ export default async function TodayPage() {
 
       {/* ── Points leaderboard pills ── */}
       <div className="flex gap-2 flex-wrap mb-6">
-        {users
-          .sort((a, b) => b.totalPoints - a.totalPoints)
-          .map((user) => (
-            <div
-              key={user.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                user.id === session.userId
-                  ? "ring-2 ring-offset-1"
-                  : "opacity-70"
-              }`}
-              style={{
-                backgroundColor: user.color + "18",
-                color: user.color,
-                ["--ring-color" as string]: user.color,
-              }}
-            >
-              <span>{user.avatar ?? "👤"}</span>
-              <span>{user.name}</span>
-              <span className="font-bold">{user.totalPoints} pts</span>
-            </div>
-          ))}
+        {leaderboard.map((user) => (
+          <div
+            key={user.userId}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
+              user.userId === session.userId
+                ? "ring-2 ring-offset-1"
+                : "opacity-70"
+            }`}
+            style={{
+              backgroundColor: user.color + "18",
+              color: user.color,
+              ["--ring-color" as string]: user.color,
+            }}
+          >
+            <span>{user.avatar ?? "👤"}</span>
+            <span>{user.name}</span>
+            <span className="font-bold">{user.totalPoints} pts</span>
+          </div>
+        ))}
       </div>
 
       {/* ── Task list ── */}

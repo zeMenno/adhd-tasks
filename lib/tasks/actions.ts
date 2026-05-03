@@ -1,36 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { sql, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { tasks, transactions, users } from "@/lib/db/schema";
+import { tasks } from "@/lib/db/schema";
+import { awardPoints } from "@/lib/points/award";
 import { getInstanceById, approveInstance, createTaskInstance, parseDateStr } from "./queries";
 import { shouldCreateNewInstance, getNextDueDate, type RecurrenceType } from "./recurrence";
 import type { TaskStatus } from "@/lib/db/schema";
 import { markTaskDoneWithSession } from "./completeTask";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async function awardPoints(
-  userId: string,
-  instanceId: string,
-  earnedPoints: number,
-  taskTitle: string
-) {
-  await db.insert(transactions).values({
-    userId,
-    taskInstanceId: instanceId,
-    points: earnedPoints,
-    description: `Taak voltooid: ${taskTitle}`,
-  });
-
-  await db
-    .update(users)
-    .set({ totalPoints: sql`total_points + ${earnedPoints}` })
-    .where(eq(users.id, userId));
-}
 
 async function spawnNextInstance(
   taskId: string,

@@ -1,6 +1,7 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import type { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -22,7 +23,17 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
-export async function createSession(userId: string): Promise<void> {
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge: MAX_AGE,
+    path: "/",
+  };
+}
+
+async function signSessionToken(userId: string): Promise<string> {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
     with: { household: true },
@@ -31,7 +42,7 @@ export async function createSession(userId: string): Promise<void> {
 
   const expiresAt = Math.floor(Date.now() / 1000) + MAX_AGE;
 
-  const token = await new SignJWT({
+  return new SignJWT({
     userId: user.id,
     householdId: user.householdId,
     userName: user.name,
@@ -40,15 +51,22 @@ export async function createSession(userId: string): Promise<void> {
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime(`${MAX_AGE}s`)
     .sign(getSecret());
+}
 
+/** Server Components / Server Actions only — not usable from Route Handlers. */
+export async function createSession(userId: string): Promise<void> {
+  const token = await signSessionToken(userId);
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: MAX_AGE,
-    path: "/",
-  });
+  cookieStore.set(COOKIE_NAME, token, sessionCookieOptions());
+}
+
+/** Route Handlers must set the cookie on `NextResponse` (cookies().set is not mutable there). */
+export async function setSessionCookieOnResponse(
+  response: NextResponse,
+  userId: string,
+): Promise<void> {
+  const token = await signSessionToken(userId);
+  response.cookies.set(COOKIE_NAME, token, sessionCookieOptions());
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
