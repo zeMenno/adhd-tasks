@@ -1,4 +1,5 @@
 import type { AppHeaderData } from "@/lib/app/header-data";
+import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
 type Props = AppHeaderData & {
   userName: string;
@@ -26,7 +27,7 @@ export function AppUserHeader({
         >
           {myAvatar}
         </span>
-        <span className="text-sm font-semibold text-slate-700">{userName}</span>
+        <UserAccountMenu userName={userName} />
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
             streakActive ? "bg-orange-50 text-orange-500" : "bg-slate-100 text-slate-400"
