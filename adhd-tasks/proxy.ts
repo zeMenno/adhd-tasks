@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const COOKIE_NAME = "adhd_session";
-const PROTECTED_PREFIX = "/today,/tasks,/rewards,/stats".split(",");
 
 function getSecret() {
   const secret = process.env.SESSION_SECRET;
@@ -10,13 +9,9 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  const isProtected = PROTECTED_PREFIX.some((p) => pathname.startsWith(p));
-  if (!isProtected) return NextResponse.next();
-
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
+
   if (!token) {
     return NextResponse.redirect(new URL("/pin", request.url));
   }
