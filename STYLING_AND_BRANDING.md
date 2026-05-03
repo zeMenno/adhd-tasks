@@ -1,6 +1,6 @@
 # ADHDTasks — Styling & Branding Guide
 
-This document captures the **playful, soft, mobile-first** visual language of ADHDTasks so new screens and refactors stay consistent. It merges **what the product should feel like** (reference UI) with **what the codebase currently implements** (`adhd-tasks/`).
+This document captures the **playful, soft, mobile-first** visual language of ADHDTasks so new screens and refactors stay consistent. It merges **what the product should feel like** (reference UI) with **what the codebase currently implements** (repository root).
 
 ---
 
@@ -150,7 +150,7 @@ Avoid heavy borders on cards; **shadow-sm** + white on `slate-50` is the default
 
 ## 7. Motion & micro-interactions
 
-Defined in `adhd-tasks/app/globals.css`:
+Defined in `app/globals.css`:
 
 | Animation | Purpose |
 |-----------|---------|
@@ -281,16 +281,16 @@ If you use Cursor’s saved chat images locally, copy them into that folder and 
 
 | Concern | File(s) |
 |---------|---------|
-| Global font, `lang` | `adhd-tasks/app/layout.tsx` |
-| CSS variables, keyframes, Tailwind theme bridge | `adhd-tasks/app/globals.css` |
-| App shell background | `adhd-tasks/app/(app)/layout.tsx` |
-| Bottom nav styling | `adhd-tasks/components/layout/BottomNav.tsx` |
-| Task form / pills / segments | `adhd-tasks/components/tasks/TaskForm.tsx` |
-| FAB + empty state + list rows | `adhd-tasks/components/tasks/TasksManager.tsx` |
-| Today header + leaderboard + empty | `adhd-tasks/app/(app)/today/page.tsx` |
-| Task instance cards | `adhd-tasks/components/tasks/TaskCard.tsx` |
-| Sheet overlay / panel chrome | `adhd-tasks/components/ui/sheet.tsx` |
-| Generic button variants | `adhd-tasks/components/ui/button.tsx` |
+| Global font, `lang` | `app/layout.tsx` |
+| CSS variables, keyframes, Tailwind theme bridge | `app/globals.css` |
+| App shell background | `app/(app)/layout.tsx` |
+| Bottom nav styling | `components/layout/BottomNav.tsx` |
+| Task form / pills / segments | `components/tasks/TaskForm.tsx` |
+| FAB + empty state + list rows | `components/tasks/TasksManager.tsx` |
+| Today header + leaderboard + empty | `app/(app)/today/page.tsx` |
+| Task instance cards | `components/tasks/TaskCard.tsx` |
+| Sheet overlay / panel chrome | `components/ui/sheet.tsx` |
+| Generic button variants | `components/ui/button.tsx` |
 
 ---
 
@@ -305,4 +305,4 @@ If you use Cursor’s saved chat images locally, copy them into that folder and 
 
 ---
 
-*Last aligned with codebase patterns in `adhd-tasks/` (Nunito Sans, Tailwind v4 `@import`, shadcn sheet/button). Update this file when you intentionally change the design system.*
+*Last aligned with codebase patterns at the repository root (Nunito Sans, Tailwind v4 `@import`, shadcn sheet/button). Update this file when you intentionally change the design system.*
