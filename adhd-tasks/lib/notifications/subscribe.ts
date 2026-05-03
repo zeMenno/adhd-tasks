@@ -42,9 +42,13 @@ export async function subscribeToPush(vapidPublicKey: string): Promise<Subscribe
     if (perm === "default") return { ok: false, reason: "permission" };
     if (perm !== "granted") return { ok: false, reason: "unknown" };
 
+    const applicationServerKey: BufferSource = new Uint8Array(
+      urlBase64ToUint8Array(vapidPublicKey)
+    );
+
     const sub = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      applicationServerKey,
     });
 
     const json = sub.toJSON();
