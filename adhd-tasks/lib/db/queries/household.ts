@@ -6,6 +6,10 @@ export async function getHousehold() {
   return db.query.households.findFirst();
 }
 
+export async function listHouseholds() {
+  return db.query.households.findMany();
+}
+
 export async function getUsers(householdId: string) {
   return db.query.users.findMany({
     where: eq(users.householdId, householdId),

@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { describe, expect, it } from "vitest";
 import {
   calculateDaysOverdue,
@@ -6,8 +7,13 @@ import {
   shouldCreateNewInstance,
 } from "./recurrence";
 
-// Fixed reference date for all tests
-const BASE = new Date("2025-01-15T00:00:00.000Z");
+// Use local date constructor (not UTC ISO strings) to avoid timezone shifts
+const BASE = new Date(2025, 0, 15); // Jan 15, 2025 local midnight
+
+// Format a date as YYYY-MM-DD in local time
+function ymd(d: Date) {
+  return format(d, "yyyy-MM-dd");
+}
 
 // ─── getNextDueDate ────────────────────────────────────────────────────────────
 
@@ -17,30 +23,25 @@ describe("getNextDueDate", () => {
   });
 
   it("returns next day for 'daily'", () => {
-    const next = getNextDueDate("daily", BASE)!;
-    expect(next.toISOString().slice(0, 10)).toBe("2025-01-16");
+    expect(ymd(getNextDueDate("daily", BASE)!)).toBe("2025-01-16");
   });
 
   it("returns 7 days later for 'weekly'", () => {
-    const next = getNextDueDate("weekly", BASE)!;
-    expect(next.toISOString().slice(0, 10)).toBe("2025-01-22");
+    expect(ymd(getNextDueDate("weekly", BASE)!)).toBe("2025-01-22");
   });
 
   it("returns 14 days later for 'biweekly'", () => {
-    const next = getNextDueDate("biweekly", BASE)!;
-    expect(next.toISOString().slice(0, 10)).toBe("2025-01-29");
+    expect(ymd(getNextDueDate("biweekly", BASE)!)).toBe("2025-01-29");
   });
 
   it("returns 1 month later for 'monthly' (same day of month)", () => {
-    const next = getNextDueDate("monthly", BASE)!;
-    expect(next.toISOString().slice(0, 10)).toBe("2025-02-15");
+    expect(ymd(getNextDueDate("monthly", BASE)!)).toBe("2025-02-15");
   });
 
   it("monthly wraps correctly for end-of-month dates", () => {
-    const jan31 = new Date("2025-01-31T00:00:00.000Z");
-    const next = getNextDueDate("monthly", jan31)!;
+    const jan31 = new Date(2025, 0, 31);
     // Feb has no 31st — date-fns clamps to Feb 28
-    expect(next.toISOString().slice(0, 10)).toBe("2025-02-28");
+    expect(ymd(getNextDueDate("monthly", jan31)!)).toBe("2025-02-28");
   });
 });
 
@@ -52,24 +53,24 @@ describe("calculateDaysOverdue", () => {
   });
 
   it("returns 0 when due in the future", () => {
-    const tomorrow = new Date("2025-01-16T00:00:00.000Z");
+    const tomorrow = new Date(2025, 0, 16);
     expect(calculateDaysOverdue(tomorrow, BASE)).toBe(0);
   });
 
   it("returns 1 when 1 day overdue", () => {
-    const yesterday = new Date("2025-01-14T00:00:00.000Z");
+    const yesterday = new Date(2025, 0, 14);
     expect(calculateDaysOverdue(yesterday, BASE)).toBe(1);
   });
 
   it("returns 5 when 5 days overdue", () => {
-    const fiveDaysAgo = new Date("2025-01-10T00:00:00.000Z");
+    const fiveDaysAgo = new Date(2025, 0, 10);
     expect(calculateDaysOverdue(fiveDaysAgo, BASE)).toBe(5);
   });
 
   it("ignores time-of-day differences", () => {
-    const dueDateMidnight = new Date("2025-01-14T00:00:00.000Z");
-    const todayEvening   = new Date("2025-01-15T23:59:59.000Z");
-    expect(calculateDaysOverdue(dueDateMidnight, todayEvening)).toBe(1);
+    const dueDate   = new Date(2025, 0, 14, 0, 0, 0);  // Jan 14 midnight local
+    const todayLate = new Date(2025, 0, 15, 23, 59, 59); // Jan 15 23:59 local
+    expect(calculateDaysOverdue(dueDate, todayLate)).toBe(1);
   });
 });
 
@@ -101,7 +102,6 @@ describe("calculateEarnedPoints", () => {
 // ─── shouldCreateNewInstance ──────────────────────────────────────────────────
 
 describe("shouldCreateNewInstance", () => {
-  // 'once' tasks never get a new instance
   it("never creates for 'once' regardless of status or approval", () => {
     expect(shouldCreateNewInstance("once", "done",      false)).toBe(false);
     expect(shouldCreateNewInstance("once", "completed", false)).toBe(false);
@@ -109,7 +109,6 @@ describe("shouldCreateNewInstance", () => {
     expect(shouldCreateNewInstance("once", "todo",      false)).toBe(false);
   });
 
-  // Without approval required
   describe("requiresApproval = false", () => {
     it("creates after 'done'", () => {
       expect(shouldCreateNewInstance("daily", "done", false)).toBe(true);
@@ -119,16 +118,15 @@ describe("shouldCreateNewInstance", () => {
       expect(shouldCreateNewInstance("weekly", "completed", false)).toBe(true);
     });
 
-    it("does NOT create while still 'todo'", () => {
+    it("does NOT create while 'todo'", () => {
       expect(shouldCreateNewInstance("daily", "todo", false)).toBe(false);
     });
 
-    it("does NOT create while 'approved' (already waiting approval of a non-approval task, edge case)", () => {
+    it("does NOT create while 'approved'", () => {
       expect(shouldCreateNewInstance("monthly", "approved", false)).toBe(false);
     });
   });
 
-  // With approval required
   describe("requiresApproval = true", () => {
     it("creates after 'approved'", () => {
       expect(shouldCreateNewInstance("daily", "approved", true)).toBe(true);
@@ -138,7 +136,7 @@ describe("shouldCreateNewInstance", () => {
       expect(shouldCreateNewInstance("weekly", "completed", true)).toBe(true);
     });
 
-    it("does NOT create after 'done' (still needs owner approval)", () => {
+    it("does NOT create after 'done' — still needs owner approval", () => {
       expect(shouldCreateNewInstance("biweekly", "done", true)).toBe(false);
     });
 
@@ -147,12 +145,13 @@ describe("shouldCreateNewInstance", () => {
     });
   });
 
-  // All recurrence types work the same way (spot checks)
   it("works for all recurring types", () => {
     const types = ["daily", "weekly", "biweekly", "monthly"] as const;
     for (const type of types) {
-      expect(shouldCreateNewInstance(type, "done", false)).toBe(true);
-      expect(shouldCreateNewInstance(type, "todo", false)).toBe(false);
+      expect(shouldCreateNewInstance(type, "done",      false)).toBe(true);
+      expect(shouldCreateNewInstance(type, "todo",      false)).toBe(false);
+      expect(shouldCreateNewInstance(type, "approved",  true )).toBe(true);
+      expect(shouldCreateNewInstance(type, "todo",      true )).toBe(false);
     }
   });
 });

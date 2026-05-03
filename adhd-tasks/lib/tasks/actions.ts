@@ -1,0 +1,163 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { sql, eq } from "drizzle-orm";
+import { z } from "zod";
+import { requireSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { tasks, transactions, users } from "@/lib/db/schema";
+import { getInstanceById, approveInstance, createTaskInstance, parseDateStr } from "./queries";
+import { shouldCreateNewInstance, getNextDueDate, type RecurrenceType } from "./recurrence";
+import type { TaskStatus } from "@/lib/db/schema";
+import { markTaskDoneWithSession } from "./completeTask";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function awardPoints(
+  userId: string,
+  instanceId: string,
+  earnedPoints: number,
+  taskTitle: string
+) {
+  await db.insert(transactions).values({
+    userId,
+    taskInstanceId: instanceId,
+    points: earnedPoints,
+    description: `Taak voltooid: ${taskTitle}`,
+  });
+
+  await db
+    .update(users)
+    .set({ totalPoints: sql`total_points + ${earnedPoints}` })
+    .where(eq(users.id, userId));
+}
+
+async function spawnNextInstance(
+  taskId: string,
+  recurrenceType: RecurrenceType,
+  requiresApproval: boolean,
+  status: TaskStatus,
+  dueDateStr: string,
+  assignedUserId: string | null
+) {
+  if (!shouldCreateNewInstance(recurrenceType, status, requiresApproval)) return;
+
+  const nextDate = getNextDueDate(recurrenceType, parseDateStr(dueDateStr));
+  if (!nextDate) return;
+
+  await createTaskInstance(taskId, nextDate, assignedUserId);
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+export async function markTaskDone(instanceId: string) {
+  const session = await requireSession();
+  return markTaskDoneWithSession(session, instanceId);
+}
+
+export async function approveTask(instanceId: string) {
+  const session = await requireSession();
+  const instance = await getInstanceById(instanceId);
+  if (!instance) throw new Error("Taak niet gevonden");
+
+  if (instance.task.ownerUserId !== session.userId) {
+    throw new Error("Alleen de eigenaar kan deze taak goedkeuren");
+  }
+
+  if (instance.status !== "done") throw new Error("Taak wacht niet op goedkeuring");
+
+  const updated = await approveInstance(instanceId, session.userId);
+
+  // Award points to the person who did the task
+  const recipientId = instance.assignedUserId ?? session.userId;
+  if (updated.earnedPoints && updated.earnedPoints > 0) {
+    await awardPoints(
+      recipientId,
+      instanceId,
+      updated.earnedPoints,
+      instance.task.title
+    );
+  }
+
+  await spawnNextInstance(
+    instance.task.id,
+    instance.task.recurrenceType as RecurrenceType,
+    instance.task.requiresApproval,
+    updated.status as TaskStatus,
+    instance.dueDate,
+    instance.assignedUserId
+  );
+
+  revalidatePath("/today");
+  return { earnedPoints: updated.earnedPoints ?? 0 };
+}
+
+// ─── Task management ──────────────────────────────────────────────────────────
+
+const TaskSchema = z.object({
+  title: z.string().min(1).max(100),
+  assignedUserId: z.string().uuid().nullable(),
+  ownerUserId: z.string().uuid().nullable(),
+  basePoints: z.number().int().min(1).max(100),
+  penaltyPerDay: z.number().int().min(0).max(20),
+  requiresApproval: z.boolean(),
+  recurrenceType: z.enum(["once", "daily", "weekly", "biweekly", "monthly"]),
+  recurrenceDayOfWeek: z.number().int().min(0).max(6).nullable(),
+  recurrenceDayOfMonth: z.number().int().min(1).max(28).nullable(),
+  dueDate: z.string().min(1),
+});
+
+export async function createTask(data: unknown) {
+  const session = await requireSession();
+  const parsed = TaskSchema.parse(data);
+
+  const [task] = await db
+    .insert(tasks)
+    .values({
+      householdId: session.householdId,
+      title: parsed.title,
+      assignedUserId: parsed.assignedUserId,
+      ownerUserId: parsed.ownerUserId,
+      basePoints: parsed.basePoints,
+      penaltyPerDay: parsed.penaltyPerDay,
+      requiresApproval: parsed.requiresApproval,
+      recurrenceType: parsed.recurrenceType,
+      recurrenceDayOfWeek: parsed.recurrenceDayOfWeek,
+      recurrenceDayOfMonth: parsed.recurrenceDayOfMonth,
+    })
+    .returning();
+
+  await createTaskInstance(task.id, new Date(parsed.dueDate), parsed.assignedUserId);
+
+  revalidatePath("/tasks");
+  revalidatePath("/today");
+}
+
+export async function updateTask(taskId: string, data: unknown) {
+  await requireSession();
+  const parsed = TaskSchema.parse(data);
+
+  await db
+    .update(tasks)
+    .set({
+      title: parsed.title,
+      assignedUserId: parsed.assignedUserId,
+      ownerUserId: parsed.ownerUserId,
+      basePoints: parsed.basePoints,
+      penaltyPerDay: parsed.penaltyPerDay,
+      requiresApproval: parsed.requiresApproval,
+      recurrenceType: parsed.recurrenceType,
+      recurrenceDayOfWeek: parsed.recurrenceDayOfWeek,
+      recurrenceDayOfMonth: parsed.recurrenceDayOfMonth,
+    })
+    .where(eq(tasks.id, taskId));
+
+  revalidatePath("/tasks");
+  revalidatePath("/today");
+}
+
+export async function deactivateTask(taskId: string) {
+  await requireSession();
+  await db.update(tasks).set({ isActive: false }).where(eq(tasks.id, taskId));
+  revalidatePath("/tasks");
+}
