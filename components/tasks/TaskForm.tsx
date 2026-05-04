@@ -15,13 +15,14 @@ import type { Task } from "@/lib/db/schema";
 import type { HouseholdMember } from "@/lib/db/queries/household";
 
 type RecurrenceType = "once" | "daily" | "weekly" | "biweekly" | "monthly";
+type CompletionMode = "single" | "per_person";
 
 const RECURRENCE_OPTIONS: { value: RecurrenceType; label: string }[] = [
-  { value: "once",     label: "Eenmalig"    },
-  { value: "daily",   label: "Dagelijks"   },
-  { value: "weekly",  label: "Wekelijks"   },
-  { value: "biweekly",label: "2-wekelijks" },
-  { value: "monthly", label: "Maandelijks" },
+  { value: "once",      label: "Eenmalig"    },
+  { value: "daily",    label: "Dagelijks"   },
+  { value: "weekly",   label: "Wekelijks"   },
+  { value: "biweekly", label: "2-wekelijks" },
+  { value: "monthly",  label: "Maandelijks" },
 ];
 
 const DAYS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
@@ -40,20 +41,22 @@ function today() {
 export function TaskForm({ open, onClose, users, editTask }: Props) {
   const [isPending, startTransition] = useTransition();
 
-  const [title, setTitle]                     = useState("");
-  const [assignedUserId, setAssignedUserId]   = useState<string | null>(null);
-  const [ownerUserId, setOwnerUserId]         = useState<string | null>(null);
-  const [basePoints, setBasePoints]           = useState(10);
-  const [penaltyPerDay, setPenaltyPerDay]     = useState(2);
+  const [title, setTitle]                       = useState("");
+  const [assignedUserIds, setAssignedUserIds]   = useState<string[]>([]);
+  const [completionMode, setCompletionMode]     = useState<CompletionMode>("single");
+  const [ownerUserId, setOwnerUserId]           = useState<string | null>(null);
+  const [basePoints, setBasePoints]             = useState(10);
+  const [penaltyPerDay, setPenaltyPerDay]       = useState(2);
   const [requiresApproval, setRequiresApproval] = useState(false);
-  const [recurrenceType, setRecurrenceType]   = useState<RecurrenceType>("once");
+  const [recurrenceType, setRecurrenceType]     = useState<RecurrenceType>("once");
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([0]);
-  const [dayOfMonth, setDayOfMonth]           = useState(1);
-  const [dueDate, setDueDate]                 = useState(today());
+  const [dayOfMonth, setDayOfMonth]             = useState(1);
+  const [dueDate, setDueDate]                   = useState(today());
 
   function resetToDefaults() {
     setTitle("");
-    setAssignedUserId(null);
+    setAssignedUserIds([]);
+    setCompletionMode("single");
     setOwnerUserId(null);
     setBasePoints(10);
     setPenaltyPerDay(2);
@@ -66,7 +69,15 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
 
   function loadFromTask(task: Task) {
     setTitle(task.title);
-    setAssignedUserId(task.assignedUserId);
+    // Backward compat: fall back to legacy assignedUserId if array is empty
+    const userIds =
+      task.assignedUserIds && task.assignedUserIds.length > 0
+        ? task.assignedUserIds
+        : task.assignedUserId
+        ? [task.assignedUserId]
+        : [];
+    setAssignedUserIds(userIds);
+    setCompletionMode((task.completionMode as CompletionMode) ?? "single");
     setOwnerUserId(task.ownerUserId);
     setBasePoints(task.basePoints);
     setPenaltyPerDay(task.penaltyPerDay);
@@ -103,6 +114,23 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
     });
   }
 
+  function toggleAssignee(userId: string) {
+    setAssignedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      const arr = [...next];
+      // Als er nog maar 1 (of 0) gebruiker over is, reset completionMode
+      if (arr.length <= 1) setCompletionMode("single");
+      return arr;
+    });
+  }
+
+  function selectEveryone() {
+    setAssignedUserIds([]);
+    setCompletionMode("single");
+  }
+
   function handleSubmit() {
     if (!title.trim()) return toast.error("Geef de taak een naam.");
     if (!dueDate)       return toast.error("Kies een datum.");
@@ -115,7 +143,8 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
 
     const data = {
       title: title.trim(),
-      assignedUserId,
+      assignedUserIds,
+      completionMode,
       ownerUserId,
       basePoints,
       penaltyPerDay,
@@ -145,6 +174,8 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
     });
   }
 
+  const showCompletionModeToggle = assignedUserIds.length > 1;
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent
@@ -171,12 +202,12 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
             />
           </Field>
 
-          {/* Assigned user */}
+          {/* Assigned users — multi-select */}
           <Field label="Voor wie?">
             <div className="flex min-w-0 w-full flex-wrap gap-2">
               <Pill
-                active={assignedUserId === null}
-                onClick={() => setAssignedUserId(null)}
+                active={assignedUserIds.length === 0}
+                onClick={selectEveryone}
                 color="#64748b"
               >
                 Iedereen
@@ -184,8 +215,8 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
               {users.map((u) => (
                 <Pill
                   key={u.id}
-                  active={assignedUserId === u.id}
-                  onClick={() => setAssignedUserId(u.id)}
+                  active={assignedUserIds.includes(u.id)}
+                  onClick={() => toggleAssignee(u.id)}
                   color={u.color}
                 >
                   {u.avatar ?? "👤"} {u.name}
@@ -193,6 +224,26 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
               ))}
             </div>
           </Field>
+
+          {/* Completion mode — only when multiple people selected */}
+          {showCompletionModeToggle && (
+            <Field label="Voltooiing">
+              <div className="grid grid-cols-2 gap-2">
+                <ModeButton
+                  active={completionMode === "single"}
+                  onClick={() => setCompletionMode("single")}
+                  title="Eén aftik"
+                  description="Één persoon tikt af voor iedereen"
+                />
+                <ModeButton
+                  active={completionMode === "per_person"}
+                  onClick={() => setCompletionMode("per_person")}
+                  title="Per persoon"
+                  description="Iedereen tikt zelf af"
+                />
+              </div>
+            </Field>
+          )}
 
           {/* Owner */}
           <Field label="Goedgekeurd door">
@@ -398,6 +449,35 @@ function Pill({
       }
     >
       {children}
+    </button>
+  );
+}
+
+function ModeButton({
+  active,
+  onClick,
+  title,
+  description,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 text-left transition-all border-2 ${
+        active
+          ? "border-indigo-500 bg-indigo-50"
+          : "border-slate-200 bg-white"
+      }`}
+    >
+      <span className={`text-sm font-bold ${active ? "text-indigo-600" : "text-slate-700"}`}>
+        {title}
+      </span>
+      <span className="text-xs text-slate-500">{description}</span>
     </button>
   );
 }

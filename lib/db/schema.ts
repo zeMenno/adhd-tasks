@@ -54,6 +54,10 @@ export const tasks = pgTable("tasks", {
   assignedUserId: uuid("assigned_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
+  /** Multi-assignee list; empty = iedereen */
+  assignedUserIds: jsonb("assigned_user_ids").$type<string[]>().notNull().default([]),
+  /** "single" = één aftik klaar voor iedereen; "per_person" = elke toegewezene tikt zelf af */
+  completionMode: text("completion_mode").notNull().default("single"),
   ownerUserId: uuid("owner_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
@@ -239,3 +243,4 @@ export type NewTransaction = typeof transactions.$inferInsert;
 
 export type RecurrenceType = "once" | "daily" | "weekly" | "biweekly" | "monthly";
 export type TaskStatus = "todo" | "done" | "approved" | "completed";
+export type CompletionMode = "single" | "per_person";

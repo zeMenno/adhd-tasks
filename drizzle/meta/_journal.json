@@ -8,6 +8,13 @@
       "when": 1738713600000,
       "tag": "0000_recurrence_days_of_week",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1746316800000,
+      "tag": "0001_multi_assignee",
+      "breakpoints": true
     }
   ]
 }
