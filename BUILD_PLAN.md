@@ -1547,26 +1547,26 @@ Report any errors from `vercel --prod` output or the smoke test.
 
 ## Overzicht & Volgorde
 
-| # | Stap | Fase | Geschatte tijd |
-|---|------|------|----------------|
-| 1 | Next.js + tooling setup | Fundament | 30 min |
-| 2 | Neon database verbinden | Fundament | 20 min |
-| 3 | Database schema | Fundament | 45 min |
-| 4 | OTP PIN authenticatie | Auth | 2 uur |
-| 5 | Household & users setup | Auth | 1.5 uur |
-| 6 | Recurrence engine (+ tests) | Task engine | 3 uur |
-| 7 | Task instance scheduler | Task engine | 1.5 uur |
-| 8 | Today view | Core UI | 2 uur |
-| 9 | Done & Approval flow | Core UI | 2 uur |
-| 10 | Task beheer | Core UI | 1.5 uur |
-| 11 | Web Push setup | Notificaties | 2 uur |
-| 12 | Vercel Cron notificaties | Notificaties | 1.5 uur |
-| 13 | Punten systeem | Gamificatie | 1.5 uur |
-| 14 | Reward store | Gamificatie | 1.5 uur |
-| 15 | PWA setup | Polish | 1 uur |
-| 16 | UX polish & animaties | Polish | 2 uur |
-| 17 | Stats dashboard | Optioneel | 1.5 uur |
-| 18 | Vercel deployment | Deploy | 30 min |
+| # | Stap | Fase | Geschatte tijd | Status |
+|---|------|------|----------------|--------|
+| 1 | ~~Next.js + tooling setup~~ | Fundament | 30 min | ✅ |
+| 2 | ~~Neon database verbinden~~ | Fundament | 20 min | ✅ |
+| 3 | ~~Database schema~~ | Fundament | 45 min | ✅ |
+| 4 | ~~OTP PIN authenticatie~~ | Auth | 2 uur | ✅ |
+| 5 | ~~Household & users setup~~ | Auth | 1.5 uur | ✅ |
+| 6 | ~~Recurrence engine (+ tests)~~ | Task engine | 3 uur | ✅ |
+| 7 | ~~Task instance scheduler~~ | Task engine | 1.5 uur | ✅ |
+| 8 | ~~Today view~~ | Core UI | 2 uur | ✅ |
+| 9 | ~~Done & Approval flow~~ | Core UI | 2 uur | ✅ |
+| 10 | ~~Task beheer~~ | Core UI | 1.5 uur | ✅ |
+| 11 | ~~Web Push setup~~ | Notificaties | 2 uur | ✅ |
+| 12 | ~~Vercel Cron notificaties~~ | Notificaties | 1.5 uur | ✅ |
+| 13 | ~~Punten systeem~~ | Gamificatie | 1.5 uur | ✅ |
+| 14 | ~~Reward store~~ | Gamificatie | 1.5 uur | ✅ |
+| 15 | ~~PWA setup~~ | Polish | 1 uur | ✅ |
+| 16 | ~~UX polish & animaties~~ | Polish | 2 uur | ✅ |
+| 17 | ~~Stats dashboard~~ | Optioneel | 1.5 uur | ✅ |
+| 18 | ~~Vercel deployment~~ | Deploy | 30 min | ✅ |
 
 **Totale schatting MVP (stap 1-15): ~25 uur**  
 **Inclusief optionele stats: ~27 uur**

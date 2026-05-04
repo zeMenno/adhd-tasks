@@ -52,13 +52,15 @@ export async function approveTask(instanceId: string) {
 
   // Award points to the person who did the task
   const recipientId = instance.assignedUserId ?? session.userId;
+  let newStreak = 0;
   if (updated.earnedPoints && updated.earnedPoints > 0) {
-    await awardPoints(
+    const award = await awardPoints(
       recipientId,
       instanceId,
       updated.earnedPoints,
       instance.task.title
     );
+    newStreak = award.newStreak;
   }
 
   await spawnNextInstance(
@@ -71,7 +73,7 @@ export async function approveTask(instanceId: string) {
   );
 
   revalidatePath("/today");
-  return { earnedPoints: updated.earnedPoints ?? 0 };
+  return { earnedPoints: updated.earnedPoints ?? 0, newStreak };
 }
 
 // ─── Task management ──────────────────────────────────────────────────────────

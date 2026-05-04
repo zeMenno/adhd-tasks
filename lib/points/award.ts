@@ -21,8 +21,8 @@ export async function awardPoints(
   instanceId: string,
   points: number,
   taskTitle: string
-): Promise<void> {
-  if (points <= 0) return;
+): Promise<{ newStreak: number }> {
+  if (points <= 0) return { newStreak: 0 };
 
   await db.insert(transactions).values({
     userId,
@@ -36,5 +36,6 @@ export async function awardPoints(
     .set({ totalPoints: sql`total_points + ${points}` })
     .where(eq(users.id, userId));
 
-  await updateStreak(userId);
+  const newStreak = await updateStreak(userId);
+  return { newStreak };
 }

@@ -38,7 +38,7 @@ async function spawnNextInstance(
 export async function markTaskDoneWithSession(
   session: SessionPayload,
   instanceId: string
-): Promise<{ earnedPoints: number }> {
+): Promise<{ earnedPoints: number; newStreak: number }> {
   const instance = await getInstanceById(instanceId);
   if (!instance) throw new Error("Taak niet gevonden");
 
@@ -53,15 +53,17 @@ export async function markTaskDoneWithSession(
 
   const updated = await completeInstance(instanceId);
 
+  let newStreak = 0;
   if (!instance.task.requiresApproval) {
     const recipientId = instance.assignedUserId ?? session.userId;
     if (updated.earnedPoints && updated.earnedPoints > 0) {
-      await awardPoints(
+      const award = await awardPoints(
         recipientId,
         instanceId,
         updated.earnedPoints,
         instance.task.title
       );
+      newStreak = award.newStreak;
     }
 
     await spawnNextInstance(
@@ -75,5 +77,5 @@ export async function markTaskDoneWithSession(
   }
 
   revalidatePath("/today");
-  return { earnedPoints: updated.earnedPoints ?? 0 };
+  return { earnedPoints: updated.earnedPoints ?? 0, newStreak };
 }

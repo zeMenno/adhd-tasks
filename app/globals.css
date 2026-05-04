@@ -24,6 +24,26 @@
   animation: shake 0.4s ease-in-out;
 }
 
+@keyframes task-complete {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+.animate-task-complete {
+  animation: task-complete 0.3s ease-out;
+}
+
+@keyframes streak-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.animate-streak-pop {
+  animation: streak-pop 0.35s ease-out;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
