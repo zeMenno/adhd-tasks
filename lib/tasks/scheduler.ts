@@ -9,8 +9,8 @@ import type { TaskStatus } from "@/lib/db/schema";
 import {
   createTaskInstance,
   getCompletedRecurringInstances,
-  getNextInstanceForTask,
   getOverdueOpenInstances,
+  hasInstanceWithDueDate,
   parseDateStr,
   updateDaysOverdue,
 } from "./queries";
@@ -50,12 +50,11 @@ export async function runDailyScheduler(): Promise<{
       continue;
     }
 
-    // Avoid duplicates — check if a future instance already exists
-    const existing = await getNextInstanceForTask(task.id, instance.dueDate);
-    if (existing) continue;
-
     const nextDate = getNextDueDate(recurrenceType, parseDateStr(instance.dueDate));
     if (!nextDate) continue;
+
+    const nextDueStr = format(nextDate, "yyyy-MM-dd");
+    if (await hasInstanceWithDueDate(task.id, nextDueStr)) continue;
 
     await createTaskInstance(task.id, nextDate, instance.assignedUserId);
     created++;

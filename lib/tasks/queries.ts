@@ -155,23 +155,12 @@ export async function approveInstance(instanceId: string, approverId: string) {
   return updated;
 }
 
-/**
- * Checks whether a future instance already exists for a given task
- * (to avoid creating duplicates during scheduling).
- */
-export async function getNextInstanceForTask(
-  taskId: string,
-  afterDateStr: string
-) {
-  return db.query.taskInstances.findFirst({
-    where: and(
-      eq(taskInstances.taskId, taskId),
-      // dueDate column is text 'yyyy-MM-dd' — string comparison works for ISO dates
-      and(
-        not(lte(taskInstances.dueDate, afterDateStr))
-      )
-    ),
+/** True if this task already has an instance with the exact due date (yyyy-MM-dd). */
+export async function hasInstanceWithDueDate(taskId: string, dueDateStr: string) {
+  const row = await db.query.taskInstances.findFirst({
+    where: and(eq(taskInstances.taskId, taskId), eq(taskInstances.dueDate, dueDateStr)),
   });
+  return !!row;
 }
 
 /** Batch-update daysOverdue for a list of instance ids */

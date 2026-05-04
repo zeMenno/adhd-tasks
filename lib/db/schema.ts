@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -61,6 +62,8 @@ export const tasks = pgTable("tasks", {
   requiresApproval: boolean("requires_approval").notNull().default(false),
   recurrenceType: text("recurrence_type").notNull(),
   recurrenceDayOfWeek: integer("recurrence_day_of_week"),
+  /** Mon=0 … Sun=6; weekly/biweekly only */
+  recurrenceDaysOfWeek: jsonb("recurrence_days_of_week").$type<number[] | null>(),
   recurrenceDayOfMonth: integer("recurrence_day_of_month"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

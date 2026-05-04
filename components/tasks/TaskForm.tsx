@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Check } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -46,7 +47,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
   const [penaltyPerDay, setPenaltyPerDay]     = useState(2);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [recurrenceType, setRecurrenceType]   = useState<RecurrenceType>("once");
-  const [dayOfWeek, setDayOfWeek]             = useState(0);
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([0]);
   const [dayOfMonth, setDayOfMonth]           = useState(1);
   const [dueDate, setDueDate]                 = useState(today());
 
@@ -58,7 +59,7 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
     setPenaltyPerDay(2);
     setRequiresApproval(false);
     setRecurrenceType("once");
-    setDayOfWeek(0);
+    setSelectedWeekdays([0]);
     setDayOfMonth(1);
     setDueDate(today());
   }
@@ -71,7 +72,13 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
     setPenaltyPerDay(task.penaltyPerDay);
     setRequiresApproval(task.requiresApproval);
     setRecurrenceType((task.recurrenceType as RecurrenceType) ?? "once");
-    setDayOfWeek(task.recurrenceDayOfWeek ?? 0);
+    const weekDays =
+      task.recurrenceDaysOfWeek && task.recurrenceDaysOfWeek.length > 0
+        ? [...task.recurrenceDaysOfWeek].sort((a, b) => a - b)
+        : task.recurrenceDayOfWeek != null
+          ? [task.recurrenceDayOfWeek]
+          : [0];
+    setSelectedWeekdays(weekDays);
     setDayOfMonth(task.recurrenceDayOfMonth ?? 1);
     setDueDate(today());
   }
@@ -87,9 +94,24 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
     onClose();
   }
 
+  function toggleWeekday(i: number) {
+    setSelectedWeekdays((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return [...next].sort((a, b) => a - b);
+    });
+  }
+
   function handleSubmit() {
     if (!title.trim()) return toast.error("Geef de taak een naam.");
     if (!dueDate)       return toast.error("Kies een datum.");
+    if (
+      (recurrenceType === "weekly" || recurrenceType === "biweekly") &&
+      selectedWeekdays.length === 0
+    ) {
+      return toast.error("Kies minstens één dag van de week.");
+    }
 
     const data = {
       title: title.trim(),
@@ -99,7 +121,10 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
       penaltyPerDay,
       requiresApproval,
       recurrenceType,
-      recurrenceDayOfWeek: ["weekly", "biweekly"].includes(recurrenceType) ? dayOfWeek : null,
+      recurrenceDaysOfWeek:
+        recurrenceType === "weekly" || recurrenceType === "biweekly"
+          ? selectedWeekdays
+          : null,
       recurrenceDayOfMonth: recurrenceType === "monthly" ? dayOfMonth : null,
       dueDate,
     };
@@ -238,7 +263,16 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
               {RECURRENCE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setRecurrenceType(opt.value)}
+                  type="button"
+                  onClick={() => {
+                    setRecurrenceType(opt.value);
+                    if (
+                      (opt.value === "weekly" || opt.value === "biweekly") &&
+                      selectedWeekdays.length === 0
+                    ) {
+                      setSelectedWeekdays([0]);
+                    }
+                  }}
                   className={`py-2 rounded-xl text-xs font-semibold transition-all ${
                     recurrenceType === opt.value
                       ? "bg-indigo-500 text-white"
@@ -255,19 +289,30 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
           {(recurrenceType === "weekly" || recurrenceType === "biweekly") && (
             <Field label="Dag van de week">
               <div className="flex gap-1">
-                {DAYS.map((day, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setDayOfWeek(i)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      dayOfWeek === i
-                        ? "bg-indigo-500 text-white"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
+                {DAYS.map((day, i) => {
+                  const selected = selectedWeekdays.includes(i);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleWeekday(i)}
+                      className={`relative flex min-h-11 flex-1 items-center justify-center rounded-xl py-2 text-xs font-semibold transition-all ${
+                        selected
+                          ? "bg-indigo-500 text-white"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {selected ? (
+                        <Check
+                          className="absolute top-1 right-1 size-3 shrink-0 stroke-[3] opacity-95"
+                          aria-hidden
+                        />
+                      ) : null}
+                      <span>{day}</span>
+                    </button>
+                  );
+                })}
               </div>
             </Field>
           )}

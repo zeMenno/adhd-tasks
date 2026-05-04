@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1738713600000,
+      "tag": "0000_recurrence_days_of_week",
+      "breakpoints": true
+    }
+  ]
+}
