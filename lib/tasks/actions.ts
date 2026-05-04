@@ -87,7 +87,8 @@ export async function approveTask(instanceId: string) {
 const TaskSchema = z
   .object({
     title: z.string().min(1).max(100),
-    assignedUserId: z.string().uuid().nullable(),
+    assignedUserIds: z.array(z.string().uuid()).default([]),
+    completionMode: z.enum(["single", "per_person"]).default("single"),
     ownerUserId: z.string().uuid().nullable(),
     basePoints: z.number().int().min(1).max(100),
     penaltyPerDay: z.number().int().min(0).max(20),
@@ -105,6 +106,11 @@ const TaskSchema = z
     { message: "Kies minstens één dag", path: ["recurrenceDaysOfWeek"] }
   );
 
+/** For single assignee: the UUID; for 0 or multiple: null (anyone can complete). */
+function singleAssigneeId(userIds: string[]): string | null {
+  return userIds.length === 1 ? userIds[0] : null;
+}
+
 export async function createTask(data: unknown) {
   const session = await requireSession();
   const parsed = TaskSchema.parse(data);
@@ -117,11 +123,17 @@ export async function createTask(data: unknown) {
   const instanceDates = weekDays ? initialInstanceDates(anchor, weekDays) : [anchor];
 
   const taskId = randomUUID();
+
+  // Keep assignedUserId in sync for the Drizzle relation / display fallback
+  const legacyAssignedUserId = singleAssigneeId(parsed.assignedUserIds);
+
   const taskRow = {
     id: taskId,
     householdId: session.householdId,
     title: parsed.title,
-    assignedUserId: parsed.assignedUserId,
+    assignedUserId: legacyAssignedUserId,
+    assignedUserIds: parsed.assignedUserIds,
+    completionMode: parsed.completionMode,
     ownerUserId: parsed.ownerUserId,
     basePoints: parsed.basePoints,
     penaltyPerDay: parsed.penaltyPerDay,
@@ -132,13 +144,31 @@ export async function createTask(data: unknown) {
     recurrenceDayOfMonth: parsed.recurrenceDayOfMonth,
   };
 
-  const instanceRows = instanceDates.map((d) => ({
-    taskId,
-    assignedUserId: parsed.assignedUserId,
-    dueDate: format(d, "yyyy-MM-dd"),
-    status: "todo" as const,
-    daysOverdue: 0,
-  }));
+  // per_person + multiple users → one instance per user per date
+  const isPerPerson =
+    parsed.completionMode === "per_person" && parsed.assignedUserIds.length > 1;
+
+  const instanceRows = instanceDates.flatMap((d) => {
+    const dateStr = format(d, "yyyy-MM-dd");
+    if (isPerPerson) {
+      return parsed.assignedUserIds.map((userId) => ({
+        taskId,
+        assignedUserId: userId,
+        dueDate: dateStr,
+        status: "todo" as const,
+        daysOverdue: 0,
+      }));
+    }
+    return [
+      {
+        taskId,
+        assignedUserId: legacyAssignedUserId,
+        dueDate: dateStr,
+        status: "todo" as const,
+        daysOverdue: 0,
+      },
+    ];
+  });
 
   await db.batch([
     db.insert(tasks).values(taskRow),
@@ -156,11 +186,15 @@ export async function updateTask(taskId: string, data: unknown) {
   const isWeekBased =
     parsed.recurrenceType === "weekly" || parsed.recurrenceType === "biweekly";
 
+  const legacyAssignedUserId = singleAssigneeId(parsed.assignedUserIds);
+
   await db
     .update(tasks)
     .set({
       title: parsed.title,
-      assignedUserId: parsed.assignedUserId,
+      assignedUserId: legacyAssignedUserId,
+      assignedUserIds: parsed.assignedUserIds,
+      completionMode: parsed.completionMode,
       ownerUserId: parsed.ownerUserId,
       basePoints: parsed.basePoints,
       penaltyPerDay: parsed.penaltyPerDay,

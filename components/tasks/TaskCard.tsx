@@ -13,6 +13,7 @@ type InstanceWithRelations = TaskInstance & {
     ownerUser: User | null;
   };
   assignedUser: User | null;
+  approvedByUser?: User | null;
 };
 
 type Props = {
