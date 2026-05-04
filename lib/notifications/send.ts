@@ -11,6 +11,8 @@ export type PushNotificationPayload = {
   /** Shown as notification data for click / optional action */
   instanceId?: string;
   actions?: { action: string; title: string }[];
+  /** If set, service worker updates the PWA app icon badge (Badging API). */
+  badgeCount?: number;
 };
 
 let vapidConfigured = false;

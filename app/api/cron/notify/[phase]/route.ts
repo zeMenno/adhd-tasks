@@ -62,13 +62,16 @@ export async function GET(
         }
       }
 
-      const payload = buildNotificationPayload(
-        phase,
-        metrics.openCount,
-        metrics.overdueCount,
-        metrics.maxPenalty,
-        phase === 3 ? metrics.mostOverdueInstanceId : undefined
-      );
+      const payload = {
+        ...buildNotificationPayload(
+          phase,
+          metrics.openCount,
+          metrics.overdueCount,
+          metrics.maxPenalty,
+          phase === 3 ? metrics.mostOverdueInstanceId : undefined
+        ),
+        badgeCount: metrics.openCount,
+      };
 
       const { sent, failed } = await sendPushToUser(user.id, payload);
       pushesSent += sent;

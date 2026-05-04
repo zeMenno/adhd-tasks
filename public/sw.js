@@ -76,6 +76,18 @@ self.addEventListener("fetch", function (event) {
   }
 });
 
+function applyAppBadgeFromPayload(data) {
+  if (typeof data.badgeCount !== "number") return Promise.resolve();
+  if (!("setAppBadge" in navigator) && !("clearAppBadge" in navigator)) {
+    return Promise.resolve();
+  }
+  if (data.badgeCount <= 0) {
+    return navigator.clearAppBadge ? navigator.clearAppBadge() : Promise.resolve();
+  }
+  var n = Math.min(data.badgeCount, 99);
+  return navigator.setAppBadge ? navigator.setAppBadge(n) : Promise.resolve();
+}
+
 self.addEventListener("push", function (event) {
   let data = {};
   try {
@@ -97,7 +109,12 @@ self.addEventListener("push", function (event) {
     actions: data.actions || [],
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      applyAppBadgeFromPayload(data).catch(function () {}),
+    ])
+  );
 });
 
 self.addEventListener("notificationclick", function (event) {

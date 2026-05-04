@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { toast } from "sonner";
+import { requestAppBadgeRefresh } from "@/components/layout/AppBadgeSync";
 import { markTaskDone, approveTask } from "@/lib/tasks/actions";
 import { calculateEarnedPoints } from "@/lib/tasks/recurrence";
 import type { TaskInstance, Task, User } from "@/lib/db/schema";
@@ -54,6 +55,7 @@ export function TaskCard({ instance, currentUserId }: Props) {
         if (result.newStreak > 1) {
           toast(`🔥 Streak! ${result.newStreak} dagen op rij!`, { duration: 3000 });
         }
+        requestAppBadgeRefresh();
       } catch (err) {
         setJustCompleted(false);
         setOptimisticStatus(null);
@@ -74,6 +76,7 @@ export function TaskCard({ instance, currentUserId }: Props) {
         if (result.newStreak > 1) {
           toast(`🔥 Streak! ${result.newStreak} dagen op rij!`, { duration: 3000 });
         }
+        requestAppBadgeRefresh();
       } catch (err) {
         setOptimisticStatus(null);
         toast.error(err instanceof Error ? err.message : "Er ging iets mis");
