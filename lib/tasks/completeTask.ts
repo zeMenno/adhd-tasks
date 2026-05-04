@@ -51,11 +51,14 @@ export async function markTaskDoneWithSession(
 
   if (instance.status !== "todo") throw new Error("Taak is al afgerond");
 
-  const updated = await completeInstance(instanceId);
+  const updated = await completeInstance(instanceId, session.userId);
 
   let newStreak = 0;
   if (!instance.task.requiresApproval) {
-    const recipientId = instance.assignedUserId ?? session.userId;
+    const recipientId =
+      updated.completedByUserId ??
+      instance.assignedUserId ??
+      session.userId;
     if (updated.earnedPoints && updated.earnedPoints > 0) {
       const award = await awardPoints(
         recipientId,

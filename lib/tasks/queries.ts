@@ -104,7 +104,10 @@ export async function createTaskInstance(
  * Calculates earnedPoints based on current daysOverdue.
  * If the task does NOT require approval, status goes straight to 'completed'.
  */
-export async function completeInstance(instanceId: string) {
+export async function completeInstance(
+  instanceId: string,
+  completedByUserId: string
+) {
   const instance = await getInstanceById(instanceId);
   if (!instance) throw new Error("Instance not found");
 
@@ -125,6 +128,7 @@ export async function completeInstance(instanceId: string) {
     .set({
       status: newStatus,
       completedAt: new Date(),
+      completedByUserId,
       earnedPoints,
       daysOverdue,
     })

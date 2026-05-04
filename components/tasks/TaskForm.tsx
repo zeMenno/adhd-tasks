@@ -196,14 +196,15 @@ export function TaskForm({ open, onClose, users, editTask }: Props) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-700">Vereist goedkeuring</span>
             <button
+              type="button"
               onClick={() => setRequiresApproval((v) => !v)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
+              className={`relative h-6 w-12 shrink-0 rounded-full transition-colors ${
                 requiresApproval ? "bg-indigo-500" : "bg-slate-200"
               }`}
             >
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  requiresApproval ? "translate-x-6" : "translate-x-0.5"
+                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  requiresApproval ? "translate-x-6" : "translate-x-0"
                 }`}
               />
             </button>

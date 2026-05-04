@@ -81,6 +81,10 @@ export const taskInstances = pgTable("task_instances", {
   approvedByUserId: uuid("approved_by_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
+  /** User who tapped "done" (used for points when assignee is unset or differs). */
+  completedByUserId: uuid("completed_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   earnedPoints: integer("earned_points"),
   daysOverdue: integer("days_overdue").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -132,6 +136,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   ownedTasks: many(tasks, { relationName: "ownerUser" }),
   assignedInstances: many(taskInstances, { relationName: "assignedInstance" }),
   approvedInstances: many(taskInstances, { relationName: "approvedInstance" }),
+  completedInstances: many(taskInstances, { relationName: "completedInstance" }),
   transactions: many(transactions),
 }));
 
@@ -174,6 +179,11 @@ export const taskInstancesRelations = relations(taskInstances, ({ one, many }) =
     fields: [taskInstances.approvedByUserId],
     references: [users.id],
     relationName: "approvedInstance",
+  }),
+  completedByUser: one(users, {
+    fields: [taskInstances.completedByUserId],
+    references: [users.id],
+    relationName: "completedInstance",
   }),
   transactions: many(transactions),
 }));

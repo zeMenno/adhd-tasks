@@ -50,8 +50,11 @@ export async function approveTask(instanceId: string) {
 
   const updated = await approveInstance(instanceId, session.userId);
 
-  // Award points to the person who did the task
-  const recipientId = instance.assignedUserId ?? session.userId;
+  // Award points to whoever marked done; fallbacks for legacy rows
+  const recipientId =
+    instance.completedByUserId ??
+    instance.assignedUserId ??
+    session.userId;
   let newStreak = 0;
   if (updated.earnedPoints && updated.earnedPoints > 0) {
     const award = await awardPoints(
