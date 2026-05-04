@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, not, or } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, not, or } from "drizzle-orm";
 import { format, parse } from "date-fns";
 import { db } from "@/lib/db";
 import { taskInstances, tasks } from "@/lib/db/schema";
@@ -169,6 +169,45 @@ export async function updateDaysOverdue(instanceId: string, daysOverdue: number)
     .update(taskInstances)
     .set({ daysOverdue })
     .where(eq(taskInstances.id, instanceId));
+}
+
+/**
+ * Returns all task instances with dueDate between fromDate and toDate (inclusive).
+ * Used for the week view to show upcoming tasks.
+ */
+export async function getWeekInstances(
+  householdId: string,
+  fromDate: Date,
+  toDate: Date
+) {
+  const fromStr = toDateStr(fromDate);
+  const toStr = toDateStr(toDate);
+
+  const householdTasks = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(and(eq(tasks.householdId, householdId), eq(tasks.isActive, true)));
+
+  if (householdTasks.length === 0) return [];
+  const taskIds = householdTasks.map((t) => t.id);
+
+  return db.query.taskInstances.findMany({
+    where: and(
+      inArray(taskInstances.taskId, taskIds),
+      gte(taskInstances.dueDate, fromStr),
+      lte(taskInstances.dueDate, toStr)
+    ),
+    with: {
+      task: {
+        with: {
+          assignedUser: true,
+          ownerUser: true,
+        },
+      },
+      assignedUser: true,
+      approvedByUser: true,
+    },
+  });
 }
 
 /** Returns all open (todo/done) instances with a dueDate before today */
